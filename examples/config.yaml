@@ -1,0 +1,13 @@
+default_wv_cdm: 'public'
+default_pr_cdm: 'public'
+# change the type to mariadb to use mariadb below
+database_type: 'mariadb'
+fqdn: 'cdrm-project.com'
+remote_cdm_secret: 'CDRM'
+
+# uncomment all the lines below to use mariadb and fill out the information
+mariadb:
+  user: 'cdrm'
+  password: 'password'
+  host: '127.0.0.1'
+  database: 'cdrm_project'
