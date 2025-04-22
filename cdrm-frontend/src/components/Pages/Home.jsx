@@ -90,7 +90,7 @@ function Home() {
           <title>Decrypt Widevine/PlayReady Content</title>
           <meta property='og:title' content='CDRM-Project' />
           <meta property='og:description' content='Decrypt Widevine/PlayReady Content' />
-          <meta property='og:image' content='/lockforog.svg' />
+          <meta property='og:image' content='https://cdrm-project.com/lockforog.png' />
           <meta property='og:url' content='https://cdrm-project.com/' />
           <meta property='og:locale' content='en_US' />
         </Helmet>
