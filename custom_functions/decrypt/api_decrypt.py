@@ -4,12 +4,16 @@ from pywidevine.pssh import PSSH as widevinePSSH
 from pyplayready.cdm import Cdm as playreadyCdm
 from pyplayready.device import Device as playreadyDevice
 from pyplayready.system.pssh import PSSH as playreadyPSSH
-from custom_functions.database.cache_to_db import cache_to_db
 import requests
 import base64
 import ast
 import glob
 import os
+import yaml
+
+
+
+
 
 
 def find_license_key(data, keywords=None):
@@ -70,6 +74,12 @@ def is_base64(string):
         return False
 
 def api_decrypt(pssh:str = None, license_url: str = None, headers: str = None, cookies: str = None, json_data: str = None):
+    with open(f'{os.getcwd()}/configs/config.yaml', 'r') as file:
+        config = yaml.safe_load(file)
+    if config['database_type'].lower() == 'sqlite':
+        from custom_functions.database.cache_to_db_sqlite import cache_to_db
+    elif config['database_type'].lower() == 'mariadb':
+        from custom_functions.database.cache_to_db_mariadb import cache_to_db
     if pssh is None:
         return {
             'status': 'error',
@@ -79,20 +89,24 @@ def api_decrypt(pssh:str = None, license_url: str = None, headers: str = None, c
         if "</WRMHEADER>".encode("utf-16-le") in base64.b64decode(pssh):  # PR
             try:
                 pr_pssh = playreadyPSSH(pssh)
-                wrm_headers = pr_pssh.get_wrm_headers()
             except Exception as error:
                 return {
                     'status': 'error',
                     'message': f'An error occurred processing PSSH\n\n{error}'
                 }
             try:
-                prd_files = glob.glob(f'{os.getcwd()}/configs/CDMs/PR/CDRM.prd')
+                base_name = config["default_pr_cdm"]
+                if not base_name.endswith(".prd"):
+                    base_name += ".prd"
+                    prd_files = glob.glob(f'{os.getcwd()}/configs/CDMs/PR/{base_name}')
+                else:
+                    prd_files = glob.glob(f'{os.getcwd()}/configs/CDMs/PR/{base_name}')
                 if prd_files:
                     pr_device = playreadyDevice.load(prd_files[0])
                 else:
                     return {
                         'status': 'error',
-                        'message': 'No .prd files found'
+                        'message': 'No default .prd file found'
                     }
             except Exception as error:
                 return {
@@ -114,7 +128,7 @@ def api_decrypt(pssh:str = None, license_url: str = None, headers: str = None, c
                     'message': f'An error occurred opening a CDM session\n\n{error}'
                 }
             try:
-                pr_challenge = pr_cdm.get_license_challenge(pr_session_id, wrm_headers[0])
+                pr_challenge = pr_cdm.get_license_challenge(pr_session_id, pr_pssh.wrm_headers[0])
             except Exception as error:
                 return {
                     'status': 'error',
@@ -165,7 +179,7 @@ def api_decrypt(pssh:str = None, license_url: str = None, headers: str = None, c
                     'message': f'An error occurred sending license reqeust\n\n{error}\n\n{licence.content}'
                 }
             try:
-                pr_cdm.parse_license(pr_session_id, licence.content)
+                pr_cdm.parse_license(pr_session_id, licence.text)
             except Exception as error:
                 return {
                     'status': 'error',
@@ -225,13 +239,18 @@ def api_decrypt(pssh:str = None, license_url: str = None, headers: str = None, c
                 'message': f'An error occurred processing PSSH\n\n{error}'
             }
         try:
-            wvd_files = glob.glob(f'{os.getcwd()}/configs/CDMs/WV/CDRM*.wvd')
+            base_name = config["default_wv_cdm"]
+            if not base_name.endswith(".wvd"):
+                base_name += ".wvd"
+                wvd_files = glob.glob(f'{os.getcwd()}/configs/CDMs/WV/{base_name}')
+            else:
+                wvd_files = glob.glob(f'{os.getcwd()}/configs/CDMs/WV/{base_name}')
             if wvd_files:
                 wv_device = widevineDevice.load(wvd_files[0])
             else:
                 return {
                     'status': 'error',
-                    'message': 'No .wvd files found'
+                    'message': 'No default .wvd file found'
                 }
         except Exception as error:
             return {

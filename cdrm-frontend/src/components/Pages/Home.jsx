@@ -33,7 +33,7 @@ function Home() {
     let cookies = document.getElementById('cookies').value;
     let data = document.getElementById('data').value;
 
-    fetch('https://cdrm-project.com/api/decrypt', {
+    fetch('/api/decrypt', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

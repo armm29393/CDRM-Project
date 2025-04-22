@@ -1,4 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { data } from 'react-router-dom';
+const { protocol, hostname, port } = window.location;
+
+let fullHost = `${protocol}//${hostname}`;
+if (
+  (protocol === 'http:' && port !== '80') ||
+  (protocol === 'https:' && port !== '443' && port !== '')
+) {
+  fullHost += `:${port}`;
+}
 
 function API() {
   // State to store the fetched data for Remote CDM
@@ -14,7 +24,7 @@ function API() {
   // Fetch data when the component mounts
   useEffect(() => {
     // Replace this with the actual URL of your API
-    fetch('https://cdrm-project.com/remotecdm/widevine/deviceinfo')
+    fetch('/remotecdm/widevine/deviceinfo')
       .then(response => response.json())
       .then(data => {
         // Update the state with the fetched data
@@ -45,7 +55,7 @@ function API() {
               {`import requests
 
 print(requests.post(
-    url='https://cdrm-project.com/api/decrypt',
+    url='${fullHost}/api/decrypt',
     headers={
         'Content-Type': 'application/json',
     },
@@ -73,7 +83,7 @@ print(requests.post(
             <pre className='p-2'>{`import requests
 
 print(requests.post(
-    url='https://cdrm-project.com/api/cache/search',
+    url='${fullHost}/api/cache/search',
     json={
         'input': 'AAAAW3Bzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADsIARIQ62dqu8s0Xpa7z2FmMPGj2hoNd2lkZXZpbmVfdGVzdCIQZmtqM2xqYVNkZmFsa3IzaioCSEQyAA=='
     }
@@ -89,15 +99,15 @@ print(requests.post(
           <br />
           <div className='h-9/10 bg-[rgba(0,0,0,0.2)] p-2 rounded text-white shadow-sm shadow-purple-900'>
             <p className='p-2'>
-              device_type: <span id='wv_device_type'>{deviceInfo.device_type}</span>
+              device_type: <span id='wv_device_type'>"{deviceInfo.device_type}"</span>
               <br></br>
               system_id: <span id='wv_system_id'>{deviceInfo.system_id}</span>
               <br></br>
               security_level: <span id='wv_security_level'>{deviceInfo.security_level}</span>
               <br></br>
-              host: <span id='wv_host'>{deviceInfo.host}</span>
+              host: <span id='wv_host'>"{fullHost}/remotecdm/widevine"</span>
               <br></br>
-              secret: <span id='wv_secret'>{deviceInfo.secret}</span>
+              secret: <span id='wv_secret'>"{deviceInfo.secret}"</span>
               <br></br>
               device_name: <span id='wv_device_name'>{deviceInfo.device_name}</span>
             </p>
@@ -113,9 +123,9 @@ print(requests.post(
           <div className='h-9/10 bg-[rgba(0,0,0,0.2)] p-2 rounded text-white shadow-sm shadow-purple-900'>
             <pre className='p-2'>{`key_vaults:
     - type: API
-      name: "CDRM"
-      uri: "https://cdrm-project.com/api/cache"
-      token: "CDRM"`}</pre>
+      name: "Online Vault"
+      uri: "${fullHost}/api/cache"
+      token: "${deviceInfo.secret}"`}</pre>
           </div>
         </details>
         

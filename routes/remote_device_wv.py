@@ -9,16 +9,19 @@ from pywidevine.cdm import Cdm as widevineCDM
 from pywidevine.device import Device as widevineDevice
 from pywidevine.exceptions import (InvalidContext, InvalidInitData, InvalidLicenseMessage, InvalidLicenseType,
                                    InvalidSession, SignatureMismatch, TooManySessions)
-from custom_functions.database.cache_to_db import cache_to_db
+
+import yaml
 
 remotecdm_wv_bp = Blueprint('remotecdm_wv', __name__)
+with open(f'{os.getcwd()}/configs/config.yaml', 'r') as file:
+    config = yaml.safe_load(file)
 
 @remotecdm_wv_bp.route('/remotecdm/widevine', methods=['GET', 'HEAD'])
 def remote_cdm_widevine():
     if request.method == 'GET':
         return jsonify({
             'status': 200,
-            'message': "CDRM-Project's Remote Widevine CDM."
+            'message': f"{config['fqdn'].upper()} Remote Widevine CDM."
         })
     if request.method == 'HEAD':
         response = Response(status=200)
@@ -28,21 +31,24 @@ def remote_cdm_widevine():
 @remotecdm_wv_bp.route('/remotecdm/widevine/deviceinfo', methods=['GET'])
 def remote_cdm_widevine_deviceinfo():
     if request.method == 'GET':
-        device = widevineDevice.load(f'{os.getcwd()}/configs/CDMs/WV/CDRM.wvd')
+        base_name = config["default_wv_cdm"]
+        if not base_name.endswith(".wvd"):
+            full_file_name = (base_name + ".wvd")
+        device = widevineDevice.load(f'{os.getcwd()}/configs/CDMs/WV/{full_file_name}')
         cdm = widevineCDM.from_device(device)
         return jsonify({
-            'device_type': 'ANDROID',
+            'device_type': cdm.device_type.name,
             'system_id': cdm.system_id,
             'security_level': cdm.security_level,
-            'host': 'https://cdrm-project.com/remotecdm/widevine',
-            'secret': 'CDRM',
-            'device_name': 'CDRM'
+            'host': f'https://{config["fqdn"]}/remotecdm/widevine',
+            'secret': f'{config["remote_cdm_secret"]}',
+            'device_name': f'{base_name}'
         })
 
 @remotecdm_wv_bp.route('/remotecdm/widevine/<device>/open', methods=['GET'])
 def remote_cdm_widevine_open(device):
-    if str(device) == 'CDRM':
-        wv_device = widevineDevice.load(f'{os.getcwd()}/configs/CDMs/WV/CDRM.wvd')
+    if str(device).lower() == config['default_wv_cdm'].lower():
+        wv_device = widevineDevice.load(f'{os.getcwd()}/configs/CDMs/WV/{config["default_wv_cdm"]}.wvd')
         cdm = current_app.config["CDM"] = widevineCDM.from_device(wv_device)
         session_id = cdm.open()
         return jsonify({
@@ -64,7 +70,7 @@ def remote_cdm_widevine_open(device):
 
 @remotecdm_wv_bp.route('/remotecdm/widevine/<device>/close/<session_id>', methods=['GET'])
 def remote_cdm_widevine_close(device, session_id):
-    if str(device) == 'CDRM':
+    if str(device).lower() == config['default_wv_cdm'].lower():
         session_id = bytes.fromhex(session_id)
         cdm = current_app.config["CDM"]
         if not cdm:
@@ -91,7 +97,7 @@ def remote_cdm_widevine_close(device, session_id):
 
 @remotecdm_wv_bp.route('/remotecdm/widevine/<device>/set_service_certificate', methods=['POST'])
 def remote_cdm_widevine_set_service_certificate(device):
-    if str(device) == 'CDRM':
+    if str(device).lower() == config['default_wv_cdm'].lower():
         body = request.get_json()
         for required_field in ("session_id", "certificate"):
             if required_field == "certificate":
@@ -146,7 +152,7 @@ def remote_cdm_widevine_set_service_certificate(device):
 
 @remotecdm_wv_bp.route('/remotecdm/widevine/<device>/get_service_certificate', methods=['POST'])
 def remote_cdm_widevine_get_service_certificate(device):
-    if str(device) == 'CDRM':
+    if str(device).lower() == config['default_wv_cdm'].lower():
         body = request.get_json()
         for required_field in ("session_id",):
             if not body.get(required_field):
@@ -191,7 +197,7 @@ def remote_cdm_widevine_get_service_certificate(device):
 
 @remotecdm_wv_bp.route('/remotecdm/widevine/<device>/get_license_challenge/<license_type>', methods=['POST'])
 def remote_cdm_widevine_get_license_challenge(device, license_type):
-    if str(device) == 'CDRM':
+    if str(device).lower() == config['default_wv_cdm'].lower():
         body = request.get_json()
         for required_field in ("session_id", "init_data"):
             if not body.get(required_field):
@@ -256,7 +262,7 @@ def remote_cdm_widevine_get_license_challenge(device, license_type):
 
 @remotecdm_wv_bp.route('/remotecdm/widevine/<device>/parse_license', methods=['POST'])
 def remote_cdm_widevine_parse_license(device):
-    if str(device) == 'CDRM':
+    if str(device).lower() == config['default_wv_cdm'].lower():
         body = request.get_json()
         for required_field in ("session_id", "license_message"):
             if not body.get(required_field):
@@ -305,7 +311,7 @@ def remote_cdm_widevine_parse_license(device):
 
 @remotecdm_wv_bp.route('/remotecdm/widevine/<device>/get_keys/<key_type>', methods=['POST'])
 def remote_cdm_widevine_get_keys(device, key_type):
-    if str(device) == 'CDRM':
+    if str(device).lower() == config['default_wv_cdm'].lower():
         body = request.get_json()
         for required_field in ("session_id",):
             if not body.get(required_field):
@@ -346,6 +352,10 @@ def remote_cdm_widevine_get_keys(device, key_type):
             if not key_type or key.type == key_type
         ]
         for entry in keys_json:
+            if config['database_type'].lower() != 'mariadb':
+                from custom_functions.database.cache_to_db_sqlite import cache_to_db
+            elif config['database_type'].lower() == 'mariadb':
+                from custom_functions.database.cache_to_db_mariadb import cache_to_db
             if entry['type'] != 'SIGNING':
                 cache_to_db(pssh=str(current_app.config['pssh']), kid=entry['key_id'], key=entry['key'])
 

@@ -3,3 +3,4 @@
 *.wvd
 *.db
 .idea/
+config.yaml

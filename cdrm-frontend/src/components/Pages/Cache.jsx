@@ -1,64 +1,58 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 function Cache() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [cacheData, setCacheData] = useState([]); // State to hold API data
-  const [keyCount, setKeyCount] = useState(0); // State to hold the current key count
-  
+  const [cacheData, setCacheData] = useState([]);
+  const [keyCount, setKeyCount] = useState(0);
+  const debounceTimeout = useRef(null); // ← store the timeout ID
 
-  // Fetch the cached key count when the component mounts and every 10 seconds
-  useEffect(() => {
-    const fetchInterval = setInterval(() => {
-      fetchKeyCount();
-    }, 10000); // Fetch every 10 seconds
+  const handleInputChange = (event) => {
+    const query = event.target.value;
+    setSearchQuery(query);
 
-    // Initial fetch
-    fetchKeyCount();
+    // Clear the previous timeout
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
 
-    // Cleanup interval when the component is unmounted
-    return () => clearInterval(fetchInterval);
-  }, []);
+    // Set a new timeout
+    debounceTimeout.current = setTimeout(() => {
+      if (query.trim() !== '') {
+        sendApiCall(query);
+      } else {
+        setCacheData([]); // optional: clear results on empty query
+      }
+    }, 1000); // 2 seconds
+  };
 
-  // Function to fetch the cached key count
   const fetchKeyCount = () => {
-    fetch('https://cdrm-project.com/api/cache/keycount')
+    fetch('/api/cache/keycount')
       .then((response) => response.json())
       .then((data) => {
-        setKeyCount(data.count); // Assuming the API returns an object with a "count" field
+        setKeyCount(data.count);
       })
       .catch((error) => {
         console.error('Error fetching key count:', error);
       });
   };
 
-  // Function to handle input changes
-  const handleInputChange = (event) => {
-    const query = event.target.value;
-    setSearchQuery(query); // Update the state with the current input value
+  useEffect(() => {
+    const fetchInterval = setInterval(fetchKeyCount, 10000);
+    fetchKeyCount();
+    return () => clearInterval(fetchInterval);
+  }, []);
 
-    // Send the API call with the current input
-    sendApiCall(query);
-  };
-
-  // Function to send API call for searching keys
   const sendApiCall = (text) => {
-    if (text.length > 0) {
-      fetch('https://cdrm-project.com/api/cache/search', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ input: text }),
-      })
-        .then(response => response.json())
-        .then(data => {
-          setCacheData(data); // Update the state with the response data
-        })
-        .catch(error => {
-          console.error('Error:', error);
-        });
-    }
+    fetch('/api/cache/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input: text }),
+    })
+      .then((response) => response.json())
+      .then((data) => setCacheData(data))
+      .catch((error) => console.error('Error:', error));
   };
+
 
   return (
     <>
@@ -79,7 +73,7 @@ function Cache() {
             <span className='text-white w-1/1 text-center'>
               Cached Keys: {keyCount} {/* Display the count of cached keys */}
             </span>
-          <a href='https://cdrm-project.com/api/cache/download'>
+          <a href='/api/cache/download'>
           <button className=' self-start w-1/1 bg-green-700 rounded-md mt-1 active:transform active:scale-95 cursor-pointer hover:bg-green-600/50 pt-1 pb-1'>
             Download
           </button>
