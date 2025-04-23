@@ -86,14 +86,6 @@ function Home() {
   return (
     <>
       <div className='w-full min-h-full bg-zinc-900 flex flex-col items-center justify-center'>
-        <Helmet>
-          <title>Decrypt Widevine/PlayReady Content</title>
-          <meta property='og:title' content='CDRM-Project' />
-          <meta property='og:description' content='Decrypt Widevine/PlayReady Content' />
-          <meta property='og:image' content='https://cdrm-project.com/lockforog.png' />
-          <meta property='og:url' content='https://cdrm-project.com/' />
-          <meta property='og:locale' content='en_US' />
-        </Helmet>
         <form className='flex flex-col w-8/10 min-h-8/10 bg-[rgba(0,0,0,0.2)] p-10 border-black border-1 rounded-xl shadow-lg shadow-cyan-500/50 overflow-y-auto' onSubmit={handleSubmit}>
           <label htmlFor='pssh' className='text-white mb-1'>PSSH:</label>
           <input type='text' id='pssh' name='pssh' className='text-white bg-[rgba(0,0,0,0.2)] focus:outline-none rounded focus:shadow-sm focus:shadow-cyan-500/50 transition-shadow duration-300 ease-in-out p-2' />
