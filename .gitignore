@@ -4,3 +4,5 @@
 *.db
 .idea/
 configs/config.yaml
+bin/
+lib/
